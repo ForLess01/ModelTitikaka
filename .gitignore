@@ -26,3 +26,4 @@ docs/*.fdb_latexmk
 # OS
 .DS_Store
 Thumbs.db
+guion.txt

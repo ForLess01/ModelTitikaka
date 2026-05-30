@@ -1,6 +1,7 @@
-Variable,Media_Muestral,Media_Teorica,Varianza_Muestral
-Interllegadas,7.6528,7.5,57.1508
-Tamano Grupo,10.6379,10.6667,8.2196
-Registro,4.985,5.0,0.6717
-Navegacion Ida,32.4513,32.5,18.7879
-Permanencia,104.681,105.0,784.2302
+Variable,Distribucion,Media_Muestral,Media_Teorica,Diferencia_Media,Varianza_Muestral,Varianza_Teorica,Diferencia_Varianza
+Interllegadas,Exponencial,7.6518,7.5,0.1518,58.5814,56.25,2.3314
+Tamano Grupo,Triangular discreta redondeada,10.6404,10.6667,-0.0263,8.1895,8.3056,-0.1161
+Registro Triangular,Triangular,4.9867,5.0,-0.0133,0.6748,0.6667,0.0081
+Registro Normal Truncada,Normal truncada,5.0089,5.0,0.0089,0.7682,0.7737,-0.0055
+Navegacion Ida,Uniforme,32.5167,32.5,0.0167,18.7785,18.75,0.0285
+Permanencia,Triangular,104.7282,105.0,-0.2718,792.2103,787.5,4.7103

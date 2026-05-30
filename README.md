@@ -43,3 +43,7 @@ jupyter notebook notebooks/simulacion_embarcaciones_titicaca.ipynb
 La ficha de observación es **sintética y académica**. No corresponde a una medición
 presencial oficial; se construyó con base en el PDF del trabajo, fuentes públicas
 (MINCETUR, SERNANP) y supuestos operativos coherentes con el sistema real.
+
+La simulación base mantiene registro triangular. La distribución Normal truncada
+N(5, 1²) en [3, 7] se incluye como validación complementaria exigida por el
+trabajo académico, sin afirmar que provenga de datos de campo oficiales.

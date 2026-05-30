@@ -220,10 +220,13 @@ embarcaciones turísticas del Muelle Turístico de Puno, que opera hacia las
 islas del Lago Titicaca. El sistema presenta variabilidad en llegada de
 grupos turísticos, registro, disponibilidad de embarcaciones, navegación y
 permanencia en destino. Se modelaron cinco variables aleatorias con
-distribuciones Exponencial, Triangular y Uniforme, y se ejecutaron 1\,000
+distribuciones Exponencial, Triangular y Uniforme para el escenario final.
+Además, se incluyó una Normal truncada como validación complementaria del
+tiempo de registro, según el requisito académico de aplicar la distribución
+Normal. Se ejecutaron 1\,000
 réplicas Montecarlo por escenario. Los resultados del escenario base
 revelan una espera promedio de \textbf{66,2 minutos} desde la llegada
-hasta el embarque, con una utilización de embarcaciones del \textbf{82,8\%}
+hasta el embarque, con una utilización de embarcaciones del \textbf{83,0\%}
 y aproximadamente \textbf{225 turistas no atendidos} por jornada de cuatro
 horas. Se compararon cuatro escenarios alternativos: agregar una
 embarcación (E1), reducir el tiempo de preparación (E2), aumentar la
@@ -593,7 +596,9 @@ variables y, después, la justificación de cada elección.
     Tamaño de grupo & $G$ & Triangular discreta & mín~4, moda~10, máx~18 &
       Basado en ficha de observación sintética. \\[3pt]
     Tiempo de registro & $T_r$ & Triangular & mín~3, moda~5, máx~7 &
-      Proceso manual con variabilidad moderada y acotada. \\[3pt]
+      Proceso manual con variabilidad moderada y acotada; distribución usada en el escenario final. \\[3pt]
+    Registro complementario & $T_{r,N}$ & Normal truncada & $\mu=5$, $\sigma=1$, rango 3--7 &
+      Uso académico alternativo para aplicar Normal sin cambiar el escenario base. \\[3pt]
     Navegación ida & $T_{n1}$ & Uniforme & mín~25, máx~40 &
       Sin valor preferente dentro del rango; depende del viento. \\[3pt]
     Permanencia en isla & $T_p$ & Triangular & mín~45, moda~90, máx~180 &
@@ -635,6 +640,15 @@ hasta 7 minutos si hay problemas. El valor más frecuente es 5 minutos.
 La triangular $\mathcal{T}(3, 5, 7)$ captura exactamente esa
 variabilidad acotada.
 
+\paragraph{Registro alternativo — Normal truncada.}
+El enunciado del trabajo exige aplicar la distribución Normal. Para no
+alterar el escenario final ni afirmar datos de campo inexistentes, se
+incluye una alternativa académica para el mismo proceso de registro:
+$T_{r,N} \sim \mathcal{N}(5,1^2)$ truncada al intervalo $[3,7]$. Esta
+opción conserva el promedio operativo de 5 minutos, evita valores
+imposibles fuera del rango observado en el PDF base y se usa sólo en la
+validación de distribuciones, no en la simulación final de escenarios.
+
 \paragraph{Tiempo de navegación — Uniforme.}
 El trayecto hacia las Islas Uros toma entre 25 y 40 minutos según las
 condiciones del lago. No hay un tiempo más probable que otro dentro de
@@ -651,24 +665,50 @@ distribución con cola derecha más larga.
 
 \subsection{Generación en Python}
 
-\begin{lstlisting}[caption={Funciones generadoras de variables aleatorias}]
+\begin{lstlisting}[caption={Funciones generadoras de variables aleatorias por transformada}]
 rng = np.random.default_rng(2026)
 
+def exponential_inverse(rng, mean):
+    u = rng.random()
+    return -mean * np.log1p(-u)
+
+def uniform_inverse(rng, low, high):
+    u = rng.random()
+    return low + (high - low) * u
+
+def triangular_inverse(rng, left, mode, right):
+    u = rng.random()
+    split = (mode - left) / (right - left)
+    if u < split:
+        return left + np.sqrt(u * (right - left) * (mode - left))
+    return right - np.sqrt((1 - u) * (right - left) * (right - mode))
+
+def normal_box_muller(rng, mean=5, sd=1):
+    u1, u2 = rng.random(), rng.random()
+    z = np.sqrt(-2 * np.log(u1)) * np.cos(2 * np.pi * u2)
+    return mean + sd * z
+
 def generar_interllegada(rng, media=7.5):
-    return rng.exponential(scale=media)
+    return exponential_inverse(rng, media)
 
 def generar_tamano_grupo(rng):
-    return max(1, int(round(rng.triangular(left=4, mode=10, right=18))))
+    return max(1, int(round(triangular_inverse(rng, 4, 10, 18))))
 
 def generar_registro(rng):
-    return rng.triangular(left=3, mode=5, right=7)
+    return triangular_inverse(rng, 3, 5, 7)
 
 def generar_navegacion(rng):
-    return rng.uniform(25, 40)
+    return uniform_inverse(rng, 25, 40)
 
 def generar_permanencia(rng):
-    return rng.triangular(left=45, mode=90, right=180)
+    return triangular_inverse(rng, 45, 90, 180)
 \end{lstlisting}
+
+\noindent La Exponencial, Uniforme y Triangular se generaron mediante
+transformada inversa explícita. La Normal truncada se generó con
+Box--Muller y rechazo dentro del intervalo $[3,7]$; Box--Muller no es
+inversa de CDF, pero sí una transformación exacta de variables uniformes
+independientes a una variable normal estándar.
 % -----------------------------------------------------------------------
 % 9. MODELO DE SIMULACIÓN MONTECARLO
 % -----------------------------------------------------------------------
@@ -796,27 +836,34 @@ siguientes secciones:
 \section{Validación de distribuciones}
 
 Se generaron \textbf{10\,000 muestras} de cada variable y se compararon
-las medias muestrales con las medias teóricas.
+media y varianza muestral contra sus valores teóricos. Esta comparación
+incluye la Normal truncada como validación complementaria del proceso de
+registro; el escenario final sigue usando la triangular.
 
 \begin{table}[H]
   \centering
-  \caption{Comparación de medias: muestral vs.\ teórica (n = 10\,000, semilla 2026)}
-  \begin{tabular}{@{}lrrr@{}}
+  \caption{Validación estadística: muestral vs.\ teórica (n = 10\,000, semilla 2026)}
+  \scriptsize
+  \begin{tabular}{@{}llrrrrrr@{}}
     \toprule
-    Variable & Media muestral & Media teórica & Varianza muestral \\
+    Variable & Distribución & Media m. & Media t. & Dif. media & Var. m. & Var. t. & Dif. var. \\
     \midrule
-    Interllegadas   &  7,6528 &  7,5000 &  57,1508 \\
-    Tamaño de grupo & 10,6379 & 10,6667 &   8,2196 \\
-    Registro        &  4,9850 &  5,0000 &   0,6717 \\
-    Navegación ida  & 32,4513 & 32,5000 &  18,7879 \\
-    Permanencia     & 104,681 & 105,000 & 784,230  \\
+    Interllegadas & Exponencial & 7,6518 & 7,5000 & 0,1518 & 58,5814 & 56,2500 & 2,3314 \\
+    Tamaño grupo & Triangular disc. & 10,6404 & 10,6667 & -0,0263 & 8,1895 & 8,3056 & -0,1161 \\
+    Registro & Triangular & 4,9867 & 5,0000 & -0,0133 & 0,6748 & 0,6667 & 0,0081 \\
+    Registro & Normal trunc. & 5,0089 & 5,0000 & 0,0089 & 0,7682 & 0,7737 & -0,0055 \\
+    Navegación ida & Uniforme & 32,5167 & 32,5000 & 0,0167 & 18,7785 & 18,7500 & 0,0285 \\
+    Permanencia & Triangular & 104,7282 & 105,0000 & -0,2718 & 792,2103 & 787,5000 & 4,7103 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\noindent La desviación entre media muestral y teórica es inferior al 1\%
-en todos los casos, lo que confirma que los generadores producen muestras
-consistentes con las distribuciones definidas.
+\noindent Las diferencias se mantienen dentro de lo esperable para una
+muestra aleatoria de 10\,000 observaciones. La varianza exponencial muestra
+la mayor diferencia absoluta por su cola derecha, pero su orden de magnitud
+coincide con la varianza teórica $\mu^2 = 56{,}25$. En las demás variables,
+las discrepancias de media y varianza son pequeñas frente a la escala de
+cada proceso.
 
 \subsection{Histogramas de validación}
 
@@ -850,8 +897,13 @@ consistentes con las distribuciones definidas.
     \includegraphics[width=\textwidth]{../figures/hist_permanencia.png}
     \caption{Permanencia -- Triangular}
   \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{../figures/hist_registro_normal.png}
+    \caption{Registro -- Normal truncada}
+  \end{subfigure}
 
-  \caption{Histogramas de validación (10\,000 muestras cada uno)}
+  \caption{Histogramas de validación con PDF/PMF teórica superpuesta (10\,000 muestras cada uno)}
 \end{figure}
 
 % -----------------------------------------------------------------------
@@ -870,16 +922,16 @@ hasta las 10:00.
     \toprule
     Métrica & Valor promedio \\
     \midrule
-    Espera promedio ($W_q$)            & 66,21 min \\
-    Tiempo promedio en sistema ($W$)   & 236,43 min \\
-    Longitud promedio de cola ($L_q$)  & 8,83 grupos \\
-    Utilización de embarcaciones       & 82,8\% \\
-    Porcentaje que espera en cola      & 87,5\% \\
-    Percentil 95 de espera             & 142,72 min \\
-    Turistas atendidos por jornada     & 119,9 \\
+    Espera promedio ($W_q$)            & 66,17 min \\
+    Tiempo promedio en sistema ($W$)   & 238,31 min \\
+    Longitud promedio de cola ($L_q$)  & 8,82 grupos \\
+    Utilización de embarcaciones       & 83,0\% \\
+    Porcentaje que espera en cola      & 87,1\% \\
+    Percentil 95 de espera             & 142,58 min \\
+    Turistas atendidos por jornada     & 119,3 \\
     Turistas no atendidos por jornada  & 224,9 \\
-    Viajes realizados                  & 5,2 \\
-    Ocupación promedio por viaje       & 77,2\% \\
+    Viajes realizados                  & 5,1 \\
+    Ocupación promedio por viaje       & 77,5\% \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -935,11 +987,11 @@ Los cinco escenarios evaluados son:
       No atend. \\
               & (min)  & (gr.) & (\%)  & (min)        &        & \\
     \midrule
-    E0 Base              & 66,21 &  8,83 & 82,8 & 142,72 & 119,9 & 224,9 \\
-    E1 Más embarcaciones & 55,65 &  7,42 & 79,3 & 126,51 & 149,6 & 190,0 \\
-    E2 Menor preparación & 66,16 &  8,82 & 82,7 & 140,19 & 121,8 & 219,0 \\
-    E3 Mayor capacidad   & 61,77 &  8,24 & 80,8 & 129,25 & 148,0 & 192,5 \\
-    E4 Alta demanda      & 71,85 & 11,98 & 84,5 & 154,79 & 125,7 & 304,4 \\
+    E0 Base              & 66,17 &  8,82 & 83,0 & 142,58 & 119,3 & 224,9 \\
+    E1 Más embarcaciones & 55,02 &  7,34 & 79,2 & 126,49 & 149,3 & 194,3 \\
+    E2 Menor preparación & 66,10 &  8,81 & 82,6 & 139,93 & 122,0 & 219,9 \\
+    E3 Mayor capacidad   & 62,06 &  8,28 & 80,7 & 129,38 & 149,4 & 191,3 \\
+    E4 Alta demanda      & 71,09 & 11,85 & 84,3 & 153,23 & 126,0 & 299,9 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -976,16 +1028,16 @@ Los cinco escenarios evaluados son:
 \subsection{Análisis de resultados por escenario}
 
 \paragraph{E0 — Base.}
-El sistema opera con una espera promedio de 66,21 minutos y una
-utilización del 82,8\%. El percentil 95 de espera llega a 142,72
+El sistema opera con una espera promedio de 66,17 minutos y una
+utilización del 83,0\%. El percentil 95 de espera llega a 142,58
 minutos, lo que significa que 1 de cada 20 grupos espera más de dos
 horas y media solo para embarcar. Eso evidencia un sistema con
 congestión real, no marginal.
 
 \paragraph{E1 — Más embarcaciones.}
-Agregar una cuarta embarcación reduce la espera promedio en 10,56
-minutos y el percentil 95 baja a 126,51 minutos. Los turistas
-atendidos suben de 119,9 a 149,6, un incremento del 24,7\%. Es la
+Agregar una cuarta embarcación reduce la espera promedio en 11,15
+minutos y el percentil 95 baja a 126,49 minutos. Los turistas
+atendidos suben de 119,3 a 149,3, un incremento aproximado del 25,2\%. Es la
 mejora más grande en términos absolutos dentro del modelo. Su
 factibilidad económica debe evaluarse por separado, porque la simulación
 no incorpora una estructura de costos.
@@ -993,7 +1045,7 @@ no incorpora una estructura de costos.
 \paragraph{E2 — Menor preparación.}
 Este es el resultado más revelador del análisis. Reducir el tiempo
 de preparación de 10 a 5 minutos, exactamente a la mitad, produce
-una mejora de apenas \textbf{0,05 minutos} en la espera promedio.
+una mejora de apenas \textbf{0,07 minutos} en la espera promedio.
 Prácticamente nada. La razón es matemáticamente clara: la preparación
 representa solo el 5,6\% del ciclo total de 180 minutos. Ahorrar 5
 minutos por viaje, en 5,2 viajes promedio por jornada, da un ahorro
@@ -1003,14 +1055,14 @@ por los resultados.
 
 \paragraph{E3 — Mayor capacidad.}
 Aumentar la capacidad a 40 turistas por embarcación reduce la espera
-a 61,77 minutos y el percentil 95 a 129,25 minutos. Los turistas
-atendidos llegan a 148,0, casi igual que en E1 pero sin agregar
+a 62,06 minutos y el percentil 95 a 129,38 minutos. Los turistas
+atendidos llegan a 149,4, prácticamente igual que en E1 pero sin agregar
 ninguna embarcación nueva. Es un resultado relevante porque logra
 un impacto comparable a E1 a través de un cambio operativo diferente:
 embarcaciones más grandes en lugar de más embarcaciones.
 
 \paragraph{E4 — Alta demanda.}
-Con 10 grupos por hora el sistema se deteriora notablemente: 304,4
+Con 10 grupos por hora el sistema se deteriora notablemente: 299,9
 turistas no atendidos por jornada, un 35\% más que en el escenario
 base. Este escenario no representa una mejora sino una prueba de
 estrés que confirma algo importante: el sistema ya opera cerca de su
@@ -1038,16 +1090,17 @@ El sistema recibe alrededor de 345 turistas por jornada pero solo puede
 transportar entre 120 y 160. Esa brecha estructural no se cierra con
 ajustes menores.
 
-\subsection{Por qué E1 funciona mejor que todos}
+\subsection{Por qué E1 reduce más la espera}
 
 Agregar una embarcación aumenta la capacidad del sistema en un 33\%.
 Más importante aún, la cuarta embarcación opera en paralelo con las
 otras tres, lo que significa que puede completar su ciclo mientras las
 demás aún están en viaje. Eso se traduce directamente en más grupos
-atendidos antes del cierre de la jornada: de 119,9 a 149,6 turistas
-promedio, con 35 turistas no atendidos menos por día. El percentil 95
-de espera cae 16 minutos. Es la intervención con mayor impacto
-numérico en todas las métricas.
+atendidos antes del cierre de la jornada: de 119,3 a 149,3 turistas
+promedio, con 30,6 turistas no atendidos menos por día. El percentil 95
+de espera cae 16 minutos. Es la intervención con mejor impacto sobre
+espera y cola, aunque E3 alcanza un volumen de atención prácticamente
+equivalente.
 
 \subsection{Por qué E3 es una alternativa real}
 
@@ -1055,7 +1108,7 @@ Lo interesante de E3 es que logra resultados muy cercanos a E1 sin
 ampliar la flota. Pasar de 30 a 40 turistas por embarcación permite
 que cada viaje sea más productivo: se transportan más personas por
 ciclo con el mismo número de botes. Los turistas atendidos llegan a
-148, casi idéntico a los 149,6 de E1. La diferencia práctica es que
+149,4, casi idéntico a los 149,3 de E1. La diferencia práctica es que
 E3 requiere embarcaciones de mayor porte o capacidad ampliada, lo que
 puede ser más fácil de gestionar operativamente que adquirir una
 unidad completamente nueva.
@@ -1064,8 +1117,8 @@ unidad completamente nueva.
 
 El escenario de alta demanda no es una mejora sino una advertencia.
 Si la demanda sube apenas un 25\% (de 8 a 10 grupos por hora), el
-sistema pasa de 224,9 turistas no atendidos a 304,4. Un incremento
-del 35\% en turistas no atendidos por un aumento del 25\% en demanda.
+sistema pasa de 224,9 turistas no atendidos a 299,9. Un incremento
+aproximado del 33\% en turistas no atendidos por un aumento del 25\% en demanda.
 Esa desproporción indica que el sistema no tiene margen de absorción.
 Ante cualquier evento que concentre más turistas en el muelle, como
 festividades o feriados, el sistema colapsará sin una intervención
@@ -1085,9 +1138,12 @@ por escenario, se pueden establecer las siguientes conclusiones:
     tiempo de registro, tiempo de navegación y tiempo de permanencia
     en isla.
   \item Las distribuciones Exponencial, Triangular y Uniforme modelan
-    adecuadamente cada variable. La validación con 10\,000 muestras
-    mostró desviaciones inferiores al 1\% respecto a las medias
-    teóricas en todos los casos.
+    adecuadamente las variables del escenario final. La Normal truncada
+    se aplicó como alternativa académica para registro, sin modificar el
+    modelo base.
+  \item La validación con 10\,000 muestras comparó media y varianza
+    teóricas contra media y varianza muestrales; las diferencias son
+    consistentes con el tamaño muestral y con la forma de cada distribución.
   \item La ficha de observación sintética, construida con base en
     fuentes públicas y el PDF del trabajo, permite justificar los
     parámetros del modelo de forma académicamente coherente sin
@@ -1119,16 +1175,16 @@ utilización en rango aceptable (70--90\%) y factibilidad operativa:
 
 \begin{description}
   \item[Recomendación primaria -- E1:] Incorporar una cuarta embarcación.
-    Es la mejora con mayor impacto en turistas atendidos (+24,7\%) y mayor
-    reducción de la espera promedio (--16,0\%). La utilización baja a 79,3\%,
+    Es la mejora con mayor impacto en turistas atendidos (+25,2\%) y una
+    reducción de la espera promedio de 11,15 minutos. La utilización baja a 79,2\%,
     lo que deja margen para días de mayor demanda. E1 resulta atractivo por
     mejorar el desempeño operativo, aunque su factibilidad económica debe
     evaluarse por separado.
 
   \item[Alternativa de eficiencia -- E3:] Si adquirir un bote nuevo no es
     viable, reemplazar las embarcaciones actuales por unidades de 40
-    turistas de capacidad ofrece resultados comparables (148 atendidos,
-    192 no atendidos) con el mismo número de botes.
+    turistas de capacidad ofrece resultados comparables (149,4 atendidos,
+    191,3 no atendidos) con el mismo número de botes.
 
   \item[No recomendado -- E2:] Reducir el tiempo de preparación produce
     una mejora prácticamente nula ($<0{,}1$ min de espera promedio). El
@@ -1219,9 +1275,9 @@ def simular_jornada(rng, duracion=240, lambda_grupos=8,
         salida = t if carga >= umbral else max(t, limite)
         if salida > duracion: break  # no parte tras cierre
 
-        ciclo_sin = (rng.uniform(25,40) +
-                     rng.triangular(45,90,180) +
-                     rng.uniform(25,40))
+        ciclo_sin = (uniform_inverse(rng, 25, 40) +
+                     triangular_inverse(rng, 45, 90, 180) +
+                     uniform_inverse(rng, 25, 40))
         ciclo = ciclo_sin + t_prep
         ocupado += min(salida + ciclo, duracion) - salida
         botes[bote_idx] = salida + ciclo
