@@ -4,7 +4,7 @@ Simulación Montecarlo — Sistema de embarcaciones turísticas del Lago Titicac
 Correcciones aplicadas:
 - La jornada cierra a t=duracion: no se permiten salidas de embarcaciones después.
 - Turistas no atendidos = grupos que quedaron en cola al cierre de la jornada.
-- Espera = salida - t_llegada (desde llegada del grupo hasta embarque).
+- Espera = salida - t_llegada (desde llega da del grupo hasta embarque).
 - Utilización sobre ventana fija duracion * n_embarcaciones.
 """
 
@@ -25,6 +25,7 @@ for folder in ["notebooks", "figures", "data", "results", "docs", "scripts"]:
 # ---------------------------------------------------------------------------
 # Generadores por transformada
 # ---------------------------------------------------------------------------
+
 
 def uniform_inverse(rng, low, high, size=None):
     """Uniforme(a,b) mediante transformada inversa: X = a + (b-a)U."""
@@ -64,7 +65,10 @@ def truncated_normal_box_muller(rng, mean, sd, low, high, size):
     values = []
     remaining = size
     while remaining > 0:
-        draw = normal_box_muller(rng, mean, sd, size=max(remaining * 2, 1000))
+        draw = normal_box_muller(
+            rng, mean, sd, size=max(remaining * 2, 1000) if remaining > 0 else 1000
+        )
+        draw = np.asarray(draw)
         accepted = draw[(draw >= low) & (draw <= high)]
         values.append(accepted[:remaining])
         remaining -= min(remaining, len(accepted))
@@ -76,7 +80,9 @@ def triangular_mean(left, mode, right):
 
 
 def triangular_variance(left, mode, right):
-    return (left**2 + mode**2 + right**2 - left * mode - left * right - mode * right) / 18.0
+    return (
+        left**2 + mode**2 + right**2 - left * mode - left * right - mode * right
+    ) / 18.0
 
 
 def triangular_cdf(x, left, mode, right):
@@ -104,7 +110,9 @@ def rounded_triangular_moments(left, mode, right):
     values = np.arange(round(left), round(right) + 1)
     lows = np.maximum(left, values - 0.5)
     highs = np.minimum(right, values + 0.5)
-    probs = triangular_cdf(highs, left, mode, right) - triangular_cdf(lows, left, mode, right)
+    probs = triangular_cdf(highs, left, mode, right) - triangular_cdf(
+        lows, left, mode, right
+    )
     mean = float(np.sum(values * probs))
     variance = float(np.sum(((values - mean) ** 2) * probs))
     return mean, variance, values, probs
@@ -132,7 +140,11 @@ def truncated_normal_moments(mean, sd, low, high):
     phi_beta = math.exp(-0.5 * beta**2) / math.sqrt(2.0 * math.pi)
     z = normal_cdf_scalar(high, mean, sd) - normal_cdf_scalar(low, mean, sd)
     t_mean = mean + sd * (phi_alpha - phi_beta) / z
-    t_var = sd**2 * (1.0 + (alpha * phi_alpha - beta * phi_beta) / z - ((phi_alpha - phi_beta) / z) ** 2)
+    t_var = sd**2 * (
+        1.0
+        + (alpha * phi_alpha - beta * phi_beta) / z
+        - ((phi_alpha - phi_beta) / z) ** 2
+    )
     return t_mean, t_var
 
 
@@ -140,10 +152,20 @@ def truncated_normal_moments(mean, sd, low, high):
 # Ficha de observación sintética
 # ---------------------------------------------------------------------------
 
+
 def save_ficha():
     data = {
         "N_grupo": [1, 2, 3, 4, 5, 6, 7, 8],
-        "Hora_llegada": ["09:03", "09:10", "09:18", "09:25", "09:34", "09:40", "09:48", "09:56"],
+        "Hora_llegada": [
+            "09:03",
+            "09:10",
+            "09:18",
+            "09:25",
+            "09:34",
+            "09:40",
+            "09:48",
+            "09:56",
+        ],
         "Interllegada_min": [3, 7, 8, 7, 9, 6, 8, 8],
         "Tamano_grupo": [6, 12, 8, 15, 4, 18, 10, 7],
         "Registro_min": [4.1, 5.3, 3.8, 6.2, 3.4, 6.8, 4.7, 5.0],
@@ -160,13 +182,16 @@ def save_ficha():
         ],
     }
     df = pd.DataFrame(data)
-    df.to_csv(os.path.join(BASE_DIR, "data", "ficha_observacion_sintetica.csv"), index=False)
+    df.to_csv(
+        os.path.join(BASE_DIR, "data", "ficha_observacion_sintetica.csv"), index=False
+    )
     return df
 
 
 # ---------------------------------------------------------------------------
 # Histogramas de validación
 # ---------------------------------------------------------------------------
+
 
 def plot_hist(values, filename, title, xlabel, distribution, params, discrete=False):
     plt.figure(figsize=(8, 4.5))
@@ -175,13 +200,34 @@ def plot_hist(values, filename, title, xlabel, distribution, params, discrete=Fa
         support = params["support"]
         probs = params["probs"]
         bins = np.arange(support.min() - 0.5, support.max() + 1.5, 1)
-        ax.hist(values, bins=bins, density=True, alpha=0.65, edgecolor="white", label="Muestra")
-        markerline, stemlines, baseline = ax.stem(support, probs, linefmt="C3-", markerfmt="C3o", basefmt=" ", label="PMF teórica")
+        ax.hist(
+            values,
+            bins=bins,
+            density=True,
+            alpha=0.65,
+            edgecolor="white",
+            label="Muestra",
+        )
+        markerline, stemlines, baseline = ax.stem(
+            support,
+            probs,
+            linefmt="C3-",
+            markerfmt="C3o",
+            basefmt=" ",
+            label="PMF teórica",
+        )
         plt.setp(stemlines, linewidth=1.8)
         plt.setp(markerline, markersize=4.5)
         ax.set_ylabel("Probabilidad")
     else:
-        ax.hist(values, bins=35, density=True, alpha=0.65, edgecolor="white", label="Muestra")
+        ax.hist(
+            values,
+            bins=35,
+            density=True,
+            alpha=0.65,
+            edgecolor="white",
+            label="Muestra",
+        )
         x = np.linspace(min(values), max(values), 500)
         if distribution == "exponential":
             mean = params["mean"]
@@ -192,7 +238,9 @@ def plot_hist(values, filename, title, xlabel, distribution, params, discrete=Fa
             low, high = params["low"], params["high"]
             y = np.where((x >= low) & (x <= high), 1.0 / (high - low), 0.0)
         elif distribution == "truncated_normal":
-            y = truncated_normal_pdf(x, params["mean"], params["sd"], params["low"], params["high"])
+            y = truncated_normal_pdf(
+                x, params["mean"], params["sd"], params["low"], params["high"]
+            )
         else:
             raise ValueError(f"Distribución no soportada: {distribution}")
         ax.plot(x, y, color="C3", linewidth=2.2, label="PDF teórica")
@@ -207,30 +255,103 @@ def plot_hist(values, filename, title, xlabel, distribution, params, discrete=Fa
 
 def validate_distributions(rng):
     n = 10_000
-    group_mean, group_var, group_support, group_probs = rounded_triangular_moments(4, 10, 18)
+    group_mean, group_var, group_support, group_probs = rounded_triangular_moments(
+        4, 10, 18
+    )
     normal_reg_mean, normal_reg_var = truncated_normal_moments(5, 1, 3, 7)
     samples = {
         "Interllegadas": exponential_inverse(rng, mean=7.5, size=n),
-        "Tamano Grupo": np.maximum(1, np.round(triangular_inverse(rng, 4, 10, 18, size=n)).astype(int)),
+        "Tamano Grupo": np.maximum(
+            1, np.round(triangular_inverse(rng, 4, 10, 18, size=n)).astype(int)
+        ),
         "Registro Triangular": triangular_inverse(rng, 3, 5, 7, size=n),
-        "Registro Normal Truncada": truncated_normal_box_muller(rng, mean=5, sd=1, low=3, high=7, size=n),
+        "Registro Normal Truncada": truncated_normal_box_muller(
+            rng, mean=5, sd=1, low=3, high=7, size=n
+        ),
         "Navegacion Ida": uniform_inverse(rng, 25, 40, size=n),
         "Permanencia": triangular_inverse(rng, 45, 90, 180, size=n),
     }
     theory = {
-        "Interllegadas": {"Distribucion": "Exponencial", "Media_Teorica": 7.5, "Varianza_Teorica": 7.5**2},
-        "Tamano Grupo": {"Distribucion": "Triangular discreta redondeada", "Media_Teorica": group_mean, "Varianza_Teorica": group_var},
-        "Registro Triangular": {"Distribucion": "Triangular", "Media_Teorica": triangular_mean(3, 5, 7), "Varianza_Teorica": triangular_variance(3, 5, 7)},
-        "Registro Normal Truncada": {"Distribucion": "Normal truncada", "Media_Teorica": normal_reg_mean, "Varianza_Teorica": normal_reg_var},
-        "Navegacion Ida": {"Distribucion": "Uniforme", "Media_Teorica": (25 + 40) / 2, "Varianza_Teorica": (40 - 25) ** 2 / 12},
-        "Permanencia": {"Distribucion": "Triangular", "Media_Teorica": triangular_mean(45, 90, 180), "Varianza_Teorica": triangular_variance(45, 90, 180)},
+        "Interllegadas": {
+            "Distribucion": "Exponencial",
+            "Media_Teorica": 7.5,
+            "Varianza_Teorica": 7.5**2,
+        },
+        "Tamano Grupo": {
+            "Distribucion": "Triangular discreta redondeada",
+            "Media_Teorica": group_mean,
+            "Varianza_Teorica": group_var,
+        },
+        "Registro Triangular": {
+            "Distribucion": "Triangular",
+            "Media_Teorica": triangular_mean(3, 5, 7),
+            "Varianza_Teorica": triangular_variance(3, 5, 7),
+        },
+        "Registro Normal Truncada": {
+            "Distribucion": "Normal truncada",
+            "Media_Teorica": normal_reg_mean,
+            "Varianza_Teorica": normal_reg_var,
+        },
+        "Navegacion Ida": {
+            "Distribucion": "Uniforme",
+            "Media_Teorica": (25 + 40) / 2,
+            "Varianza_Teorica": (40 - 25) ** 2 / 12,
+        },
+        "Permanencia": {
+            "Distribucion": "Triangular",
+            "Media_Teorica": triangular_mean(45, 90, 180),
+            "Varianza_Teorica": triangular_variance(45, 90, 180),
+        },
     }
-    plot_hist(samples["Interllegadas"], "hist_interllegadas.png", "Interllegadas — Exponencial(7.5) con PDF teórica", "Minutos", "exponential", {"mean": 7.5})
-    plot_hist(samples["Tamano Grupo"], "hist_tamano_grupo.png", "Tamaño de grupo — Triangular discreta con PMF teórica", "Turistas", "triangular_discrete", {"support": group_support, "probs": group_probs}, True)
-    plot_hist(samples["Registro Triangular"], "hist_registro.png", "Registro — Triangular(3,5,7) con PDF teórica", "Minutos", "triangular", {"left": 3, "mode": 5, "right": 7})
-    plot_hist(samples["Registro Normal Truncada"], "hist_registro_normal.png", "Registro — Normal truncada N(5,1²) en [3,7] con PDF teórica", "Minutos", "truncated_normal", {"mean": 5, "sd": 1, "low": 3, "high": 7})
-    plot_hist(samples["Navegacion Ida"], "hist_navegacion.png", "Navegación — Uniforme(25,40) con PDF teórica", "Minutos", "uniform", {"low": 25, "high": 40})
-    plot_hist(samples["Permanencia"], "hist_permanencia.png", "Permanencia — Triangular(45,90,180) con PDF teórica", "Minutos", "triangular", {"left": 45, "mode": 90, "right": 180})
+    plot_hist(
+        samples["Interllegadas"],
+        "hist_interllegadas.png",
+        "Interllegadas — Exponencial(7.5) con PDF teórica",
+        "Minutos",
+        "exponential",
+        {"mean": 7.5},
+    )
+    plot_hist(
+        samples["Tamano Grupo"],
+        "hist_tamano_grupo.png",
+        "Tamaño de grupo — Triangular discreta con PMF teórica",
+        "Turistas",
+        "triangular_discrete",
+        {"support": group_support, "probs": group_probs},
+        True,
+    )
+    plot_hist(
+        samples["Registro Triangular"],
+        "hist_registro.png",
+        "Registro — Triangular(3,5,7) con PDF teórica",
+        "Minutos",
+        "triangular",
+        {"left": 3, "mode": 5, "right": 7},
+    )
+    plot_hist(
+        samples["Registro Normal Truncada"],
+        "hist_registro_normal.png",
+        "Registro — Normal truncada N(5,1²) en [3,7] con PDF teórica",
+        "Minutos",
+        "truncated_normal",
+        {"mean": 5, "sd": 1, "low": 3, "high": 7},
+    )
+    plot_hist(
+        samples["Navegacion Ida"],
+        "hist_navegacion.png",
+        "Navegación — Uniforme(25,40) con PDF teórica",
+        "Minutos",
+        "uniform",
+        {"low": 25, "high": 40},
+    )
+    plot_hist(
+        samples["Permanencia"],
+        "hist_permanencia.png",
+        "Permanencia — Triangular(45,90,180) con PDF teórica",
+        "Minutos",
+        "triangular",
+        {"left": 45, "mode": 90, "right": 180},
+    )
     df = pd.DataFrame(
         [
             {
@@ -238,21 +359,28 @@ def validate_distributions(rng):
                 "Distribucion": theory[name]["Distribucion"],
                 "Media_Muestral": round(float(np.mean(values)), 4),
                 "Media_Teorica": round(float(theory[name]["Media_Teorica"]), 4),
-                "Diferencia_Media": round(float(np.mean(values) - theory[name]["Media_Teorica"]), 4),
+                "Diferencia_Media": round(
+                    float(np.mean(values) - theory[name]["Media_Teorica"]), 4
+                ),
                 "Varianza_Muestral": round(float(np.var(values)), 4),
                 "Varianza_Teorica": round(float(theory[name]["Varianza_Teorica"]), 4),
-                "Diferencia_Varianza": round(float(np.var(values) - theory[name]["Varianza_Teorica"]), 4),
+                "Diferencia_Varianza": round(
+                    float(np.var(values) - theory[name]["Varianza_Teorica"]), 4
+                ),
             }
             for name, values in samples.items()
         ]
     )
-    df.to_csv(os.path.join(BASE_DIR, "results", "validacion_distribuciones.csv"), index=False)
+    df.to_csv(
+        os.path.join(BASE_DIR, "results", "validacion_distribuciones.csv"), index=False
+    )
     return df
 
 
 # ---------------------------------------------------------------------------
 # Generación de grupos
 # ---------------------------------------------------------------------------
+
 
 def generar_grupos(rng, duracion, lambda_grupos):
     """Genera grupos turísticos que llegan durante la jornada (hasta t=duracion)."""
@@ -281,6 +409,7 @@ def generar_grupos(rng, duracion, lambda_grupos):
 # ---------------------------------------------------------------------------
 # Simulación de una jornada
 # ---------------------------------------------------------------------------
+
 
 def simular_jornada(
     rng,
@@ -351,7 +480,11 @@ def simular_jornada(
         if salida > duracion:
             break
 
-        ciclo_sin_prep = uniform_inverse(rng, 25, 40) + triangular_inverse(rng, 45, 90, 180) + uniform_inverse(rng, 25, 40)
+        ciclo_sin_prep = (
+            uniform_inverse(rng, 25, 40)
+            + triangular_inverse(rng, 45, 90, 180)
+            + uniform_inverse(rng, 25, 40)
+        )
         ciclo_total = ciclo_sin_prep + t_prep
 
         # Tiempo activo dentro de la ventana de jornada (el barco puede retornar después)
@@ -371,7 +504,7 @@ def simular_jornada(
             # Tiempo en sistema = espera previa + ciclo de viaje (sin preparación)
             sistemas.append(espera + ciclo_sin_prep)
 
-        cola = cola[len(cargados):]
+        cola = cola[len(cargados) :]
 
     # Turistas no atendidos = los que quedaron en cola al cierre de jornada
     no_atendidos = sum(g["tamano"] for g in cola)
@@ -383,7 +516,9 @@ def simular_jornada(
         "Sistema_Promedio": float(np.mean(sistemas)) if sistemas else 0.0,
         "Longitud_Cola": (lambda_grupos / 60.0) * espera_prom,
         "Utilizacion": ocupado / tiempo_total if tiempo_total else 0.0,
-        "Porcentaje_Espera": float(np.mean(np.array(esperas_cola) > 0)) if esperas_cola else 0.0,
+        "Porcentaje_Espera": (
+            float(np.mean(np.array(esperas_cola) > 0)) if esperas_cola else 0.0
+        ),
         "Percentil_95_Espera": float(np.percentile(esperas, 95)) if esperas else 0.0,
         "Turistas_Atendidos": atendidos,
         "Turistas_No_Atendidos": no_atendidos,
@@ -396,13 +531,49 @@ def simular_jornada(
 # Escenarios Montecarlo
 # ---------------------------------------------------------------------------
 
+
 def run_scenarios(rng, n_replicas=1000):
     escenarios = [
-        {"Escenario": "E0 Base",               "lambda": 8,  "n_emb": 3, "cap": 30, "prep": 10, "umbral": 24},
-        {"Escenario": "E1 Más embarcaciones",   "lambda": 8,  "n_emb": 4, "cap": 30, "prep": 10, "umbral": 24},
-        {"Escenario": "E2 Menor preparación",   "lambda": 8,  "n_emb": 3, "cap": 30, "prep":  5, "umbral": 24},
-        {"Escenario": "E3 Mayor capacidad",     "lambda": 8,  "n_emb": 3, "cap": 40, "prep": 10, "umbral": 32},
-        {"Escenario": "E4 Alta demanda",        "lambda": 10, "n_emb": 3, "cap": 30, "prep": 10, "umbral": 24},
+        {
+            "Escenario": "E0 Base",
+            "lambda": 8,
+            "n_emb": 3,
+            "cap": 30,
+            "prep": 10,
+            "umbral": 24,
+        },
+        {
+            "Escenario": "E1 Más embarcaciones",
+            "lambda": 8,
+            "n_emb": 4,
+            "cap": 30,
+            "prep": 10,
+            "umbral": 24,
+        },
+        {
+            "Escenario": "E2 Menor preparación",
+            "lambda": 8,
+            "n_emb": 3,
+            "cap": 30,
+            "prep": 5,
+            "umbral": 24,
+        },
+        {
+            "Escenario": "E3 Mayor capacidad",
+            "lambda": 8,
+            "n_emb": 3,
+            "cap": 40,
+            "prep": 10,
+            "umbral": 32,
+        },
+        {
+            "Escenario": "E4 Alta demanda",
+            "lambda": 10,
+            "n_emb": 3,
+            "cap": 30,
+            "prep": 10,
+            "umbral": 24,
+        },
     ]
     rows = []
     for esc in escenarios:
@@ -419,10 +590,14 @@ def run_scenarios(rng, n_replicas=1000):
         ]
         df = pd.DataFrame(reps)
         row = {"Escenario": esc["Escenario"]}
-        row.update(df.mean(numeric_only=True).round(3).to_dict())
+        row |= {
+            str(k): v for k, v in df.mean(numeric_only=True).round(3).to_dict().items()
+        }
         rows.append(row)
     result = pd.DataFrame(rows)
-    result.to_csv(os.path.join(BASE_DIR, "results", "resultados_escenarios.csv"), index=False)
+    result.to_csv(
+        os.path.join(BASE_DIR, "results", "resultados_escenarios.csv"), index=False
+    )
     return result
 
 
@@ -430,16 +605,44 @@ def run_scenarios(rng, n_replicas=1000):
 # Gráficos comparativos
 # ---------------------------------------------------------------------------
 
+
 def plot_scenarios(df):
     charts = [
-        ("Espera_Promedio",        "escenarios_espera_promedio.png",    "Tiempo promedio de espera por escenario",      "Minutos"),
-        ("Percentil_95_Espera",    "escenarios_percentil95.png",        "Percentil 95 de espera por escenario",         "Minutos"),
-        ("Utilizacion",            "escenarios_utilizacion.png",        "Utilización promedio de embarcaciones",        "Proporción"),
-        ("Turistas_No_Atendidos",  "escenarios_turistas_no_atendidos.png", "Turistas no atendidos por escenario",       "Turistas"),
+        (
+            "Espera_Promedio",
+            "escenarios_espera_promedio.png",
+            "Tiempo promedio de espera por escenario",
+            "Minutos",
+        ),
+        (
+            "Percentil_95_Espera",
+            "escenarios_percentil95.png",
+            "Percentil 95 de espera por escenario",
+            "Minutos",
+        ),
+        (
+            "Utilizacion",
+            "escenarios_utilizacion.png",
+            "Utilización promedio de embarcaciones",
+            "Proporción",
+        ),
+        (
+            "Turistas_No_Atendidos",
+            "escenarios_turistas_no_atendidos.png",
+            "Turistas no atendidos por escenario",
+            "Turistas",
+        ),
     ]
     for col, filename, title, ylabel in charts:
         plt.figure(figsize=(10, 5))
-        sns.barplot(data=df, x="Escenario", y=col, hue="Escenario", legend=False, palette="viridis")
+        sns.barplot(
+            data=df,
+            x="Escenario",
+            y=col,
+            hue="Escenario",
+            legend=False,
+            palette="viridis",
+        )
         plt.title(title, fontsize=13)
         plt.ylabel(ylabel)
         plt.xticks(rotation=20, ha="right")
@@ -451,6 +654,7 @@ def plot_scenarios(df):
 # ---------------------------------------------------------------------------
 # README
 # ---------------------------------------------------------------------------
+
 
 def write_readme():
     content = """# ModelTitikaka
@@ -510,6 +714,7 @@ trabajo académico, sin afirmar que provenga de datos de campo oficiales.
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     print("Generando ficha de observación sintética...")
