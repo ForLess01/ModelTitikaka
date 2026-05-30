@@ -25,6 +25,8 @@
 \usepackage{enumitem}
 \usepackage{tabularx}
 \usepackage{setspace}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
 
 % -----------------------------------------------------------------------
 % Geometría
@@ -55,6 +57,42 @@
 \definecolor{codecomment}{RGB}{80,130,80}
 \definecolor{codestr}{RGB}{180,70,20}
 \definecolor{codenum}{RGB}{130,130,140}
+\definecolor{flowblue}{RGB}{28,92,156}
+\definecolor{flowgreen}{RGB}{52,128,88}
+\definecolor{floworange}{RGB}{210,120,45}
+\definecolor{flowgray}{RGB}{245,247,250}
+
+\tikzset{
+  flowbox/.style={
+    rectangle, rounded corners=4pt,
+    draw=flowblue, thick, fill=flowgray,
+    align=center, text width=3.2cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
+  },
+  resourcebox/.style={
+    rectangle, rounded corners=4pt,
+    draw=flowgreen, thick, fill=green!6,
+    align=center, text width=3.2cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
+  },
+  decisionbox/.style={
+    diamond, aspect=2.2,
+    draw=floworange, thick, fill=orange!8,
+    align=center, text width=2.2cm,
+    inner sep=2pt, font=\footnotesize
+  },
+  outputbox/.style={
+    rectangle, rounded corners=4pt,
+    draw=black!60, thick, fill=blue!4,
+    align=center, text width=3.4cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
+  },
+  flowarrow/.style={-{Latex[length=3mm]}, thick, draw=black!70},
+  dashedarrow/.style={-{Latex[length=3mm]}, thick, dashed, draw=black!55}
+}
 
 \lstset{
   language=Python,
@@ -181,8 +219,9 @@ embarcación (E1), reducir el tiempo de preparación (E2), aumentar la
 capacidad (E3) y simular alta demanda (E4). Los escenarios E1 y E3
 muestran las mejoras más significativas; E2 ofrece un impacto marginal
 dado que el tiempo de preparación representa menos del 6\% del ciclo total.
-Se recomienda implementar E1 como acción prioritaria y E3 como alternativa
-de mayor eficiencia por viaje.
+E1 resulta atractivo por mejorar el desempeño operativo; sin embargo, su
+factibilidad económica debe evaluarse por separado. E3 queda como alternativa
+operativa comparable.
 
 \newpage
 
@@ -277,7 +316,7 @@ Las principales fuentes de variabilidad son:
 \medskip
 Sin un modelo de simulación, los gestores del muelle no pueden responder
 preguntas como: ¿cuántos turistas quedan sin ser atendidos en una jornada
-pico?, ¿qué mejora operativa reduce más las esperas con menor inversión?,
+pico?, ¿qué mejora operativa reduce más las esperas sin evaluar costos?,
 ¿cómo se comporta el sistema si la demanda aumenta un 25\%?
 
 La simulación Montecarlo replica el comportamiento estocástico del sistema
@@ -997,7 +1036,9 @@ utilización en rango aceptable (70--90\%) y factibilidad operativa:
   \item[Recomendación primaria -- E1:] Incorporar una cuarta embarcación.
     Es la mejora con mayor impacto en turistas atendidos (+24,7\%) y mayor
     reducción de la espera promedio (--16,0\%). La utilización baja a 79,3\%,
-    lo que deja margen para días de mayor demanda.
+    lo que deja margen para días de mayor demanda. E1 resulta atractivo por
+    mejorar el desempeño operativo, aunque su factibilidad económica debe
+    evaluarse por separado.
 
   \item[Alternativa de eficiencia -- E3:] Si adquirir un bote nuevo no es
     viable, reemplazar las embarcaciones actuales por unidades de 40
