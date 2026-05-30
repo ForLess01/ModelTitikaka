@@ -64,47 +64,31 @@
 
 \tikzset{
   flowbox/.style={
-    rectangle,
-    rounded corners=4pt,
-    draw=flowblue,
-    thick,
-    fill=flowgray,
-    align=center,
-    minimum width=3.1cm,
-    minimum height=1.05cm,
-    font=\small
+    rectangle, rounded corners=4pt,
+    draw=flowblue, thick, fill=flowgray,
+    align=center, text width=3.2cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
   },
   resourcebox/.style={
-    rectangle,
-    rounded corners=4pt,
-    draw=flowgreen,
-    thick,
-    fill=green!6,
-    align=center,
-    minimum width=3.1cm,
-    minimum height=1.05cm,
-    font=\small
+    rectangle, rounded corners=4pt,
+    draw=flowgreen, thick, fill=green!6,
+    align=center, text width=3.2cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
   },
   decisionbox/.style={
-    diamond,
-    aspect=2.1,
-    draw=floworange,
-    thick,
-    fill=orange!8,
-    align=center,
-    inner sep=1pt,
-    font=\small
+    diamond, aspect=2.2,
+    draw=floworange, thick, fill=orange!8,
+    align=center, text width=2.2cm,
+    inner sep=2pt, font=\footnotesize
   },
   outputbox/.style={
-    rectangle,
-    rounded corners=4pt,
-    draw=black!60,
-    thick,
-    fill=blue!4,
-    align=center,
-    minimum width=3.4cm,
-    minimum height=1.05cm,
-    font=\small
+    rectangle, rounded corners=4pt,
+    draw=black!60, thick, fill=blue!4,
+    align=center, text width=3.4cm,
+    minimum height=1.1cm, font=\footnotesize,
+    inner sep=4pt
   },
   flowarrow/.style={-{Latex[length=3mm]}, thick, draw=black!70},
   dashedarrow/.style={-{Latex[length=3mm]}, thick, dashed, draw=black!55}
@@ -385,50 +369,40 @@ este comportamiento.
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[node distance=0.95cm and 1.7cm]
+  \begin{tikzpicture}[node distance=0.9cm and 1.5cm]
 
-    % ── Cadena de llegada (fila superior, 3 nodos) ──────────────────────
+    % ── Fila 1: cadena de llegada (3 nodos) ──────────────────────────────
     \node[flowbox] (llegada)  {Llegada de grupos\\turísticos};
     \node[resourcebox, right=of llegada]  (registro) {Registro y pago\\ventanilla FIFO};
     \node[flowbox, right=of registro]     (cola)     {Cola de embarque\\FIFO};
 
-    % ── Fase de carga (centrado bajo la cola) ───────────────────────────
-    \node[resourcebox, below=2.0cm of cola] (carga)
+    % ── Fila 2: carga (centrado bajo cola) ──────────────────────────────
+    \node[resourcebox, below=1.7cm of cola] (carga)
       {Carga de embarcación\\$\geq$24\,tur.\ o 15\,min};
 
-    % ── Ciclo operativo ─────────────────────────────────────────────────
-    \node[flowbox, below=1.6cm of carga] (ciclo)
-      {Ciclo operativo\\nav.\ ida\,$\cdot$\,permanencia\\retorno\,$\cdot$\,preparación};
+    % ── Fila 3: ciclo ───────────────────────────────────────────────────
+    \node[flowbox, below=1.4cm of carga] (ciclo)
+      {Ciclo operativo\\ida\,$\cdot$\,permanencia\\retorno\,$\cdot$\,preparación};
 
-    % ── Métricas (panel derecho) ─────────────────────────────────────────
-    \node[outputbox, right=2.0cm of carga] (metricas)
-      {Métricas del sistema\\espera\,$\cdot$\,$L_q$\,$\cdot$\,utilización\\
-       turistas atendidos / no atendidos};
-
-    % ── Flechas principales ──────────────────────────────────────────────
+    % ── Flechas principales ─────────────────────────────────────────────
     \draw[flowarrow] (llegada)  -- (registro);
     \draw[flowarrow] (registro) -- (cola);
-    \draw[flowarrow] (cola)     -- node[right, font=\scriptsize\itshape]
-                                     {bote disponible} (carga);
-    \draw[flowarrow] (carga)    -- node[right, font=\scriptsize\itshape]
-                                     {parte} (ciclo);
+    \draw[flowarrow] (cola)   -- node[right, font=\scriptsize\itshape]
+                                    {bote disponible} (carga);
+    \draw[flowarrow] (carga)  -- node[right, font=\scriptsize\itshape]
+                                    {parte} (ciclo);
 
-    % ── Arco de retorno (izquierda, curva suave) ─────────────────────────
+    % ── Arco de retorno: ciclo → cola (lado izquierdo) ──────────────────
     \draw[dashedarrow] (ciclo.west)
-      to[out=180, in=180, looseness=1.15]
-      node[left, font=\scriptsize\itshape, pos=0.55] {disponible}
+      to[out=180, in=180, looseness=1.2]
+      node[left, font=\scriptsize\itshape, pos=0.5] {disponible}
       (cola.west);
 
-    % ── Métricas ─────────────────────────────────────────────────────────
-    \draw[dashedarrow] (carga.east) -- (metricas.west);
-    \draw[dashedarrow] (ciclo.east) -- ++(1.0,0)
-      |- (metricas.south);
-
-    % ── Recuadro de fondo ────────────────────────────────────────────────
+    % ── Recuadro de fondo ───────────────────────────────────────────────
     \begin{scope}[on background layer]
       \node[draw=black!18, rounded corners=6pt, fill=blue!2,
-        fit=(llegada)(registro)(cola)(carga)(ciclo)(metricas),
-        inner sep=0.4cm] {};
+        fit=(llegada)(registro)(cola)(carga)(ciclo),
+        inner sep=0.35cm] {};
     \end{scope}
 
   \end{tikzpicture}
@@ -443,41 +417,41 @@ problema real con la lógica implementada en el notebook.
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[node distance=1.1cm and 1.8cm]
+  \begin{tikzpicture}[node distance=1.0cm and 1.5cm]
 
-    % ── Fila superior: tres pilares del modelo ───────────────────────────
+    % ── Fila superior ────────────────────────────────────────────────────
     \node[flowbox] (entradas)
-      {Entradas aleatorias\\interllegadas\,$\cdot$\,tamaño\\
-       registro\,$\cdot$\,navegación\,$\cdot$\,permanencia};
+      {Variables aleatorias\\interll.\,$\cdot$\,tamaño\\
+       reg.\,$\cdot$\,nav.\,$\cdot$\,perm.};
     \node[resourcebox, right=of entradas] (modelo)
-      {Modelo Montecarlo\\FIFO\,$\cdot$\,capacidad\,$\cdot$\,umbral\\
-       1\,000 réplicas por escenario};
+      {Modelo Montecarlo\\FIFO\,$\cdot$\,capacidad\\
+       umbral\,$\cdot$\,1\,000 rép./esc.};
     \node[outputbox, right=of modelo] (resultados)
-      {Resultados por jornada\\espera\,$\cdot$\,$L_q$\,$\cdot$\,utilización\\
-       turistas atendidos / no atendidos};
+      {Resultados\\espera\,$\cdot$\,$L_q$\\
+       utilización\\atend./no\,atend.};
 
-    % ── Segunda fila: comparación ────────────────────────────────────────
-    \node[decisionbox, below=2.0cm of modelo] (comparacion)
-      {Comparación\\de escenarios\\E0\,--\,E4};
+    % ── Comparación ──────────────────────────────────────────────────────
+    \node[decisionbox, below=1.8cm of modelo] (comparacion)
+      {Comparación\\escenarios\\E0\,--\,E4};
 
-    % ── Tercera fila: recomendación ──────────────────────────────────────
-    \node[outputbox, below=1.8cm of comparacion] (recomendacion)
-      {Recomendación operativa\\E1 (más embarcaciones)\\o E3 (mayor capacidad)};
+    % ── Recomendación ────────────────────────────────────────────────────
+    \node[outputbox, below=1.6cm of comparacion] (recomendacion)
+      {Recomendación\\E1\,o\,E3 según métricas};
 
     % ── Flechas ──────────────────────────────────────────────────────────
-    \draw[flowarrow] (entradas)   -- (modelo);
-    \draw[flowarrow] (modelo)     -- (resultados);
-    \draw[flowarrow] (resultados.south) -- ++(0,-0.6)
+    \draw[flowarrow] (entradas) -- (modelo);
+    \draw[flowarrow] (modelo)   -- (resultados);
+    \draw[flowarrow] (modelo.south) -- (comparacion.north);
+    \draw[dashedarrow] (resultados.south) -- ++(0,-0.5)
       -| node[pos=0.25, below, font=\scriptsize\itshape] {alimenta}
          (comparacion.east);
-    \draw[flowarrow] (modelo.south) -- (comparacion.north);
     \draw[flowarrow] (comparacion) -- (recomendacion);
 
     % ── Recuadro de fondo ────────────────────────────────────────────────
     \begin{scope}[on background layer]
       \node[draw=black!18, rounded corners=6pt, fill=blue!2,
         fit=(entradas)(modelo)(resultados)(comparacion)(recomendacion),
-        inner sep=0.4cm] {};
+        inner sep=0.35cm] {};
     \end{scope}
 
   \end{tikzpicture}
