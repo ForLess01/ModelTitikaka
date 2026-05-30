@@ -6,7 +6,7 @@ Asignatura: SIS230 — Modelado Sistémico y Simulación, UNAP.
 ## Estructura
 
 ```
-notebooks/   notebook principal de simulación
+notebooks/   notebook de presentación y análisis de resultados generados
 data/        ficha de observación sintética (CSV)
 results/     métricas de validación y escenarios (CSV)
 figures/     histogramas y gráficos comparativos (PNG)
