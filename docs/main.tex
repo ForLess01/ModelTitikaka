@@ -381,15 +381,89 @@ en la isla y finalmente regresan al muelle. Antes de recibir nuevos
 pasajeros, la embarcación necesita un tiempo para alistarse nuevamente.
 
 Todo ese proceso, desde que el grupo llega hasta que la embarcación está
-lista para el siguiente viaje, se puede resumir así:
+lista para el siguiente viaje, se resume en la Figura~\ref{fig:flujo-operativo-sistema}.
 
-\begin{center}
-\small
-Llegada del grupo $\;\to\;$ Cola en ventanilla $\;\to\;$ Registro y pago
-$\;\to\;$ Cola de embarque (FIFO) $\;\to\;$ Asignación a embarcación
-$\;\to\;$ Navegación de ida $\;\to\;$ Permanencia en isla $\;\to\;$
-Navegación de retorno $\;\to\;$ Preparación para siguiente viaje
-\end{center}
+\begin{figure}[H]
+  \centering
+  \resizebox{0.95\textwidth}{!}{%
+  \begin{tikzpicture}[node distance=0.9cm and 1.5cm]
+
+    \node[flowbox] (llegada)  {Llegada de grupos\\turísticos};
+    \node[resourcebox, right=of llegada]  (registro) {Registro y pago\\ventanilla FIFO};
+    \node[flowbox, right=of registro]     (cola)     {Cola de embarque\\FIFO};
+
+    \node[resourcebox, below=1.7cm of cola] (carga)
+      {Carga de embarcación\\$\geq$24\,tur.\ o 15\,min};
+
+    \node[flowbox, below=1.4cm of carga] (ciclo)
+      {Ciclo operativo\\ida\,$\cdot$\,permanencia\\retorno\,$\cdot$\,preparación};
+
+    \draw[flowarrow] (llegada)  -- (registro);
+    \draw[flowarrow] (registro) -- (cola);
+    \draw[flowarrow] (cola)   -- node[right, font=\scriptsize\itshape]
+                                    {bote disponible} (carga);
+    \draw[flowarrow] (carga)  -- node[right, font=\scriptsize\itshape]
+                                    {parte} (ciclo);
+
+    \draw[dashedarrow] (ciclo.west)
+      to[out=180, in=180, looseness=1.2]
+      node[left, font=\scriptsize\itshape, pos=0.5] {disponible}
+      (cola.west);
+
+    \begin{scope}[on background layer]
+      \node[draw=black!18, rounded corners=6pt, fill=blue!2,
+        fit=(llegada)(registro)(cola)(carga)(ciclo),
+        inner sep=0.35cm] {};
+    \end{scope}
+
+  \end{tikzpicture}}
+  \caption{Flujo operativo del sistema de embarcaciones turísticas del Muelle de Puno.}
+  \label{fig:flujo-operativo-sistema}
+\end{figure}
+
+La Figura~\ref{fig:diagrama-sistemico} complementa el flujo operativo con
+una lectura sistémica del modelo: entradas aleatorias, reglas de operación,
+recursos limitados y salidas de desempeño.
+
+\begin{figure}[H]
+  \centering
+  \resizebox{0.95\textwidth}{!}{%
+  \begin{tikzpicture}[node distance=1.0cm and 1.5cm]
+
+    \node[flowbox] (entradas)
+      {Variables aleatorias\\interll.\,$\cdot$\,tamaño\\
+       reg.\,$\cdot$\,nav.\,$\cdot$\,perm.};
+    \node[resourcebox, right=of entradas] (modelo)
+      {Modelo Montecarlo\\FIFO\,$\cdot$\,capacidad\\
+       umbral\,$\cdot$\,1\,000 rép./esc.};
+    \node[outputbox, right=of modelo] (resultados)
+      {Resultados\\espera\,$\cdot$\,$L_q$\\
+       utilización\\atend./no\,atend.};
+
+    \node[decisionbox, below=1.8cm of modelo] (comparacion)
+      {Comparación\\escenarios\\E0\,--\,E4};
+
+    \node[outputbox, below=1.6cm of comparacion] (recomendacion)
+      {Recomendación\\E1\,o\,E3 según métricas};
+
+    \draw[flowarrow] (entradas) -- (modelo);
+    \draw[flowarrow] (modelo)   -- (resultados);
+    \draw[flowarrow] (modelo.south) -- (comparacion.north);
+    \draw[dashedarrow] (resultados.south) -- ++(0,-0.5)
+      -| node[pos=0.25, below, font=\scriptsize\itshape] {alimenta}
+         (comparacion.east);
+    \draw[flowarrow] (comparacion) -- (recomendacion);
+
+    \begin{scope}[on background layer]
+      \node[draw=black!18, rounded corners=6pt, fill=blue!2,
+        fit=(entradas)(modelo)(resultados)(comparacion)(recomendacion),
+        inner sep=0.35cm] {};
+    \end{scope}
+
+  \end{tikzpicture}}
+  \caption{Diagrama sistémico del modelo: entradas aleatorias, lógica Montecarlo y salidas de decisión.}
+  \label{fig:diagrama-sistemico}
+\end{figure}
 
 La jornada que se modela abarca desde las 06:00 hasta las 10:00, es decir,
 240 minutos continuos de operación.
@@ -833,7 +907,7 @@ abordar.
 Para que la simulación tenga valor práctico, no basta con analizar un
 solo caso. Se diseñaron cuatro escenarios alternativos al base con el
 objetivo de responder una pregunta concreta: ¿qué cambio operativo
-mejora más el sistema con menor costo de implementación?
+mejora más el desempeño del sistema bajo los supuestos modelados?
 
 Los cinco escenarios evaluados son:
 
@@ -912,9 +986,9 @@ congestión real, no marginal.
 Agregar una cuarta embarcación reduce la espera promedio en 10,56
 minutos y el percentil 95 baja a 126,51 minutos. Los turistas
 atendidos suben de 119,9 a 149,6, un incremento del 24,7\%. Es la
-mejora más grande en términos absolutos, pero también la que mayor
-inversión requiere: una embarcación adicional implica compra,
-matrícula, tripulación y mantenimiento.
+mejora más grande en términos absolutos dentro del modelo. Su
+factibilidad económica debe evaluarse por separado, porque la simulación
+no incorpora una estructura de costos.
 
 \paragraph{E2 — Menor preparación.}
 Este es el resultado más revelador del análisis. Reducir el tiempo
@@ -1057,9 +1131,9 @@ utilización en rango aceptable (70--90\%) y factibilidad operativa:
     192 no atendidos) con el mismo número de botes.
 
   \item[No recomendado -- E2:] Reducir el tiempo de preparación produce
-    una mejora prácticamente nula ($<0{,}1$ min de espera promedio). La
-    inversión en optimización de ese proceso no está justificada por los
-    resultados del modelo.
+    una mejora prácticamente nula ($<0{,}1$ min de espera promedio). El
+    esfuerzo operativo de optimizar ese proceso no queda respaldado por
+    los resultados del modelo.
 
   \item[Planificación ante alta demanda:] Si se prevén periodos con $>8$
     grupos/hora (festividades, feriados), se recomienda implementar E1
