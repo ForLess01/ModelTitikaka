@@ -1,0 +1,6 @@
+Escenario,Espera_Promedio,Sistema_Promedio,Longitud_Cola,Utilizacion,Porcentaje_Espera,Percentil_95_Espera,Turistas_Atendidos,Turistas_No_Atendidos,Viajes,Ocupacion_Promedio
+E0 Base,66.214,236.431,8.829,0.828,0.875,142.72,119.905,224.921,5.158,0.772
+E1 Más embarcaciones,55.646,227.612,7.419,0.793,0.865,126.507,149.615,189.995,6.46,0.769
+E2 Menor preparación,66.163,237.426,8.822,0.827,0.878,140.186,121.761,218.97,5.24,0.772
+E3 Mayor capacidad,61.773,233.67,8.236,0.808,0.928,129.249,147.98,192.542,4.979,0.739
+E4 Alta demanda,71.854,242.655,11.976,0.845,0.864,154.79,125.713,304.401,5.272,0.793

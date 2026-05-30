@@ -1,0 +1,28 @@
+# Archivos de planificación interna
+tasks.md
+contexto.md
+proyecto.md
+TrabajoEncargado_Contenido.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# LaTeX auxiliares
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.synctex.gz
+docs/*.fls
+docs/*.fdb_latexmk
+
+# OS
+.DS_Store
+Thumbs.db
