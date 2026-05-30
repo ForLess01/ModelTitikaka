@@ -23,6 +23,7 @@
 \usepackage{parskip}
 \usepackage{listings}
 \usepackage{enumitem}
+\usepackage{tabularx}
 \usepackage{setspace}
 
 % -----------------------------------------------------------------------
@@ -48,19 +49,35 @@
 % -----------------------------------------------------------------------
 % Código fuente
 % -----------------------------------------------------------------------
+\definecolor{codebg}{RGB}{248,248,252}
+\definecolor{codeframe}{RGB}{200,200,215}
+\definecolor{codekw}{RGB}{0,80,160}
+\definecolor{codecomment}{RGB}{80,130,80}
+\definecolor{codestr}{RGB}{180,70,20}
+\definecolor{codenum}{RGB}{130,130,140}
+
 \lstset{
   language=Python,
-  basicstyle=\ttfamily\small,
-  keywordstyle=\color{blue}\bfseries,
-  commentstyle=\color{gray},
-  stringstyle=\color{orange!80!black},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestr},
   showstringspaces=false,
   breaklines=true,
+  breakatwhitespace=true,
   frame=single,
+  rulecolor=\color{codeframe},
+  backgroundcolor=\color{codebg},
   numbers=left,
-  numberstyle=\tiny\color{gray},
-  xleftmargin=1.5em,
-  framexleftmargin=1.5em,
+  numberstyle=\tiny\color{codenum},
+  numbersep=10pt,
+  xleftmargin=2.5em,
+  framexleftmargin=2.5em,
+  aboveskip=0.9em,
+  belowskip=0.9em,
+  tabsize=4,
+  keepspaces=true,
+  columns=flexible,
 }
 
 % -----------------------------------------------------------------------
@@ -364,10 +381,11 @@ con fines de justificación de parámetros del modelo.}
 \begin{table}[H]
   \centering
   \caption{Ficha de observación sintética -- ventana 09:00 a 10:00 del 29 de mayo de 2026}
-  \begin{tabular}{@{}clrrrll@{}}
+  \small
+  \begin{tabularx}{\textwidth}{@{} c l r r r l X @{}}
     \toprule
-    N\textsuperscript{o} & Hora llegada & Interllegada & Tamaño grupo & Registro & Destino & Observación \\
-     & & (min) & (turistas) & (min) & & \\
+    N\textsuperscript{o} & Hora llegada & Interll. & Tamaño & Reg. & Destino & Observación \\
+     & & (min) & (tur.) & (min) & & \\
     \midrule
     1 & 09:03 & 3 &  6 & 4,1 & Uros & Grupo familiar pequeño \\
     2 & 09:10 & 7 & 12 & 5,3 & Uros & Grupo con guía local   \\
@@ -378,7 +396,7 @@ con fines de justificación de parámetros del modelo.}
     7 & 09:48 & 8 & 10 & 4,7 & Uros & Grupo mixto            \\
     8 & 09:56 & 8 &  7 & 5,0 & Uros & Grupo familiar         \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \begin{table}[H]
@@ -406,30 +424,30 @@ con fines de justificación de parámetros del modelo.}
   \centering
   \caption{Variables aleatorias del modelo}
   \small
-  \begin{tabular}{@{}llll p{4.5cm}@{}}
+  \begin{tabularx}{\textwidth}{@{} p{3.4cm} p{1.2cm} p{2.8cm} p{3.2cm} X @{}}
     \toprule
     Variable & Símbolo & Distribución & Parámetros & Justificación \\
     \midrule
-    Tiempo entre llegadas & $T_a$ & Exponencial & $\mu = 7{,}5$ min & Llegadas
-      independientes; 8 grupos/hora.\\[4pt]
-    Tamaño de grupo & $G$ & Triangular discreta & min~4, moda~10, max~18 &
-      Ficha de observación sintética.\\[4pt]
-    Tiempo de registro & $T_r$ & Triangular & min~3, moda~5, max~7 &
-      Proceso manual con variabilidad moderada.\\[4pt]
-    Navegación ida & $T_{n1}$ & Uniforme & min~25, max~40 &
-      Sin preferencia clara; depende del viento (PDF base).\\[4pt]
-    Permanencia en isla & $T_p$ & Triangular & min~45, moda~90, max~180 &
-      Existe valor más probable, con amplia variabilidad (PDF base).\\[4pt]
-    Navegación retorno & $T_{n2}$ & Uniforme & min~25, max~40 &
-      Supuesto simétrico con la ida.\\[4pt]
-    Preparación & $T_{prep}$ & Constante & 10 min & Regla operativa fija
-      (PDF base).\\[4pt]
-    Capacidad embarcación & $C$ & Constante & 30 turistas & Regla base
-      (PDF base).\\[4pt]
-    N\textsuperscript{o} embarcaciones & $c$ & Constante & 3 & Regla base
-      (PDF base).\\
+    Tiempo entre llegadas & $T_a$ & Exponencial & $\mu = 7{,}5$ min &
+      Llegadas independientes; 8 grupos/hora. \\[3pt]
+    Tamaño de grupo & $G$ & Triangular discreta & mín~4, moda~10, máx~18 &
+      Ficha de observación sintética. \\[3pt]
+    Tiempo de registro & $T_r$ & Triangular & mín~3, moda~5, máx~7 &
+      Proceso manual con variabilidad moderada. \\[3pt]
+    Navegación ida & $T_{n1}$ & Uniforme & mín~25, máx~40 &
+      Sin preferencia clara; depende del viento (PDF base). \\[3pt]
+    Permanencia en isla & $T_p$ & Triangular & mín~45, moda~90, máx~180 &
+      Valor más probable con amplia variabilidad (PDF base). \\[3pt]
+    Navegación retorno & $T_{n2}$ & Uniforme & mín~25, máx~40 &
+      Supuesto simétrico con la ida. \\[3pt]
+    Preparación & $T_{prep}$ & Constante & 10 min &
+      Regla operativa fija (PDF base). \\[3pt]
+    Capacidad embarcación & $C$ & Constante & 30 turistas &
+      Regla base (PDF base). \\[3pt]
+    N\textsuperscript{o} embarcaciones & $c$ & Constante & 3 &
+      Regla base (PDF base). \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 \subsection{Generación en Python}
