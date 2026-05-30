@@ -322,35 +322,64 @@ operativa.
 
 \subsection{Flujo operativo}
 
-El sistema modelado representa la jornada de embarque del Muelle Turístico
-de Puno entre las 06:00 y las 10:00. El flujo es:
+Para entender cómo funciona el sistema, es importante partir desde lo más
+básico: lo que ocurre cada mañana en el Muelle Turístico de Puno. Los
+grupos de turistas llegan, hacen fila para registrarse, pagan su pasaje y
+luego esperan hasta que una embarcación esté disponible para llevarlos a
+las islas. Una vez a bordo, viajan hasta su destino, permanecen un tiempo
+en la isla y finalmente regresan al muelle. Antes de recibir nuevos
+pasajeros, la embarcación necesita un tiempo para alistarse nuevamente.
+
+Todo ese proceso, desde que el grupo llega hasta que la embarcación está
+lista para el siguiente viaje, se puede resumir así:
 
 \begin{center}
 \small
-Llegada grupo $\;\to\;$ Cola ventanilla $\;\to\;$ Registro/pago $\;\to\;$
-Cola embarque (FIFO) $\;\to\;$ Asignación a embarcación $\;\to\;$
-Viaje ida $\;\to\;$ Permanencia $\;\to\;$ Retorno $\;\to\;$ Preparación
+Llegada del grupo $\;\to\;$ Cola en ventanilla $\;\to\;$ Registro y pago
+$\;\to\;$ Cola de embarque (FIFO) $\;\to\;$ Asignación a embarcación
+$\;\to\;$ Navegación de ida $\;\to\;$ Permanencia en isla $\;\to\;$
+Navegación de retorno $\;\to\;$ Preparación para siguiente viaje
 \end{center}
 
-\subsection{Entidades y recursos}
+La jornada que se modela abarca desde las 06:00 hasta las 10:00, es decir,
+240 minutos continuos de operación.
+
+\subsection{Entidades y recursos del sistema}
+
+La unidad que se mueve a través del sistema no es el turista individual
+sino el \textbf{grupo turístico}. Esto es importante porque los grupos no
+se separan: si un grupo de 12 personas llega junto, embarca junto y se
+contabiliza junto. Dividir un grupo no está permitido dentro del modelo.
+
+Los recursos que atienden a esos grupos son dos:
 
 \begin{description}[noitemsep]
-  \item[Entidad de llegada:] grupo turístico (no turista individual).
-  \item[Recurso de registro:] una ventanilla FIFO única.
-  \item[Recurso de transporte:] embarcaciones en paralelo (3 en escenario base).
-  \item[Política de cola:] FIFO estricto; los grupos no se dividen.
+  \item[Ventanilla de registro:] un único punto de atención donde cada
+    grupo realiza el proceso de registro y pago antes de pasar a la zona
+    de embarque. La disciplina es FIFO: el primero en llegar es el primero
+    en ser atendido.
+  \item[Embarcaciones:] en el escenario base se dispone de tres
+    embarcaciones que operan en paralelo. Cada una funciona como un
+    servidor independiente con capacidad para 30 turistas por viaje.
 \end{description}
 
-\subsection{Reglas operativas}
+\subsection{Reglas de operación}
+
+El modelo incorpora reglas concretas que determinan cuándo una embarcación
+parte y qué ocurre al final de la jornada:
 
 \begin{itemize}[noitemsep]
-  \item Una embarcación sale cuando alcanza \textbf{24 turistas} (umbral) o
-    cuando el primer grupo en cola lleva \textbf{15 minutos} esperando.
-  \item Capacidad máxima: 30 turistas por embarcación.
-  \item Si el siguiente grupo FIFO no cabe, la embarcación espera al
-    siguiente grupo disponible o cumple el tiempo máximo.
-  \item Al cierre de la jornada (10:00), no parten nuevas embarcaciones;
-    los grupos en cola quedan sin atender en esa jornada.
+  \item Una embarcación zarpa cuando acumula \textbf{24 turistas o más}
+    en su cola de embarque, lo que representa el 80\% de su capacidad.
+  \item Si el primer grupo en cola lleva \textbf{15 minutos esperando} y
+    la embarcación aún no alcanzó el umbral, parte de todas formas para
+    no acumular más demora.
+  \item La capacidad máxima por viaje es de \textbf{30 turistas}. Si el
+    siguiente grupo en cola no cabe completo, la embarcación espera al
+    siguiente grupo disponible o cumple el tiempo máximo de espera.
+  \item Cuando el reloj llega a los 240 minutos (10:00), no se autoriza
+    la salida de ninguna embarcación adicional. Los grupos que aún estén
+    en cola quedan sin ser atendidos durante esa jornada.
 \end{itemize}
 
 % -----------------------------------------------------------------------
@@ -420,39 +449,85 @@ con fines de justificación de parámetros del modelo.}
 % -----------------------------------------------------------------------
 \section{Variables aleatorias y distribuciones}
 
+Antes de programar cualquier simulación, es necesario decidir qué
+distribución de probabilidad representa mejor cada variable del sistema.
+Esta decisión no es arbitraria: cada distribución se elige porque su
+forma matemática coincide con el comportamiento real o esperado del
+fenómeno que modela. A continuación se presenta la tabla completa de
+variables y, después, la justificación de cada elección.
+
 \begin{table}[H]
   \centering
-  \caption{Variables aleatorias del modelo}
+  \caption{Variables aleatorias del modelo de simulación}
   \small
   \begin{tabularx}{\textwidth}{@{} p{3.4cm} p{1.2cm} p{2.8cm} p{3.2cm} X @{}}
     \toprule
     Variable & Símbolo & Distribución & Parámetros & Justificación \\
     \midrule
     Tiempo entre llegadas & $T_a$ & Exponencial & $\mu = 7{,}5$ min &
-      Llegadas independientes; 8 grupos/hora. \\[3pt]
+      Llegadas independientes; 8 grupos/hora promedio. \\[3pt]
     Tamaño de grupo & $G$ & Triangular discreta & mín~4, moda~10, máx~18 &
-      Ficha de observación sintética. \\[3pt]
+      Basado en ficha de observación sintética. \\[3pt]
     Tiempo de registro & $T_r$ & Triangular & mín~3, moda~5, máx~7 &
-      Proceso manual con variabilidad moderada. \\[3pt]
+      Proceso manual con variabilidad moderada y acotada. \\[3pt]
     Navegación ida & $T_{n1}$ & Uniforme & mín~25, máx~40 &
-      Sin preferencia clara; depende del viento (PDF base). \\[3pt]
+      Sin valor preferente dentro del rango; depende del viento. \\[3pt]
     Permanencia en isla & $T_p$ & Triangular & mín~45, moda~90, máx~180 &
-      Valor más probable con amplia variabilidad (PDF base). \\[3pt]
+      Existe un valor más frecuente con variabilidad amplia. \\[3pt]
     Navegación retorno & $T_{n2}$ & Uniforme & mín~25, máx~40 &
-      Supuesto simétrico con la ida. \\[3pt]
+      Condiciones simétricas al viaje de ida. \\[3pt]
     Preparación & $T_{prep}$ & Constante & 10 min &
-      Regla operativa fija (PDF base). \\[3pt]
+      Proceso estandarizado sin variabilidad observada. \\[3pt]
     Capacidad embarcación & $C$ & Constante & 30 turistas &
-      Regla base (PDF base). \\[3pt]
+      Regla operativa base establecida en el PDF del trabajo. \\[3pt]
     N\textsuperscript{o} embarcaciones & $c$ & Constante & 3 &
-      Regla base (PDF base). \\
+      Configuración base del muelle turístico. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
+\subsection{Justificación de cada distribución}
+
+\paragraph{Tiempo entre llegadas — Exponencial.}
+Los grupos turísticos no llegan con un horario fijo: unos días llegan
+varios en pocos minutos y otros días pasan intervalos más largos sin
+nadie. Ese comportamiento, donde los eventos son independientes entre sí
+y ocurren a una tasa promedio estable, es exactamente lo que modela la
+distribución exponencial. Con una tasa de 8 grupos por hora, la media
+entre llegadas es de 7,5 minutos.
+
+\paragraph{Tamaño de grupo — Triangular discreta.}
+La ficha de observación sintética registró grupos de entre 4 y 18
+turistas, con la mayoría cerca de los 10. Cuando se conoce un mínimo,
+un máximo y un valor más probable pero no se tienen suficientes datos
+históricos para ajustar una distribución más compleja, la triangular
+es la opción más honesta y defendible.
+
+\paragraph{Tiempo de registro — Triangular.}
+El registro es un proceso manual que depende del número de personas en
+el grupo, la forma de pago y la experiencia del operador. Puede tomar
+tan poco como 3 minutos en grupos pequeños con pago en efectivo o
+hasta 7 minutos si hay problemas. El valor más frecuente es 5 minutos.
+La triangular $\mathcal{T}(3, 5, 7)$ captura exactamente esa
+variabilidad acotada.
+
+\paragraph{Tiempo de navegación — Uniforme.}
+El trayecto hacia las Islas Uros toma entre 25 y 40 minutos según las
+condiciones del lago. No hay un tiempo más probable que otro dentro de
+ese rango: depende del viento, el oleaje y la potencia del motor. La
+distribución uniforme $\mathcal{U}(25, 40)$ es la adecuada cuando
+todos los valores del intervalo son igualmente posibles.
+
+\paragraph{Permanencia en isla — Triangular.}
+Los tours tienen duraciones distintas: visitas rápidas de 45 minutos,
+recorridos estándar de 90 minutos y circuitos extendidos de hasta 3
+horas. El tour de 90 minutos es el más contratado, por eso es la moda.
+La triangular $\mathcal{T}(45, 90, 180)$ representa bien esa
+distribución con cola derecha más larga.
+
 \subsection{Generación en Python}
 
-\begin{lstlisting}[caption={Generadores de variables aleatorias}]
+\begin{lstlisting}[caption={Funciones generadoras de variables aleatorias}]
 rng = np.random.default_rng(2026)
 
 def generar_interllegada(rng, media=7.5):
@@ -470,59 +545,80 @@ def generar_navegacion(rng):
 def generar_permanencia(rng):
     return rng.triangular(left=45, mode=90, right=180)
 \end{lstlisting}
-
 % -----------------------------------------------------------------------
 % 9. MODELO DE SIMULACIÓN MONTECARLO
 % -----------------------------------------------------------------------
 \section{Modelo de simulación Montecarlo}
 
-\subsection{Método}
+\subsection{¿Qué hace Montecarlo en este contexto?}
 
-La simulación Montecarlo replica el comportamiento estocástico de la
-jornada \textbf{1\,000 veces} por escenario. Cada réplica genera una
-secuencia aleatoria de llegadas, tamaños, registros, navegaciones y
-permanencias, y calcula las métricas de esa jornada. El promedio de las
-1\,000 réplicas estima el valor esperado de cada métrica.
+La idea central de Montecarlo es simple: en lugar de intentar resolver
+el sistema con ecuaciones exactas, se simula lo que pasaría en una
+jornada real muchas veces, cada vez con valores aleatorios distintos, y
+se promedian los resultados. Eso es precisamente lo que hace este modelo:
+repite una jornada completa de 240 minutos \textbf{1\,000 veces}, cada
+una con sus propias llegadas, tamaños de grupo, tiempos de registro y
+condiciones de navegación.
 
-\subsection{Algoritmo}
+¿Por qué 1\,000 réplicas y no 100 o 10\,000? Porque con 1\,000 los
+promedios ya son estables: agregar más réplicas no cambia
+significativamente los resultados, pero reducirlas introduce demasiada
+variabilidad estadística. Es un balance entre precisión y costo
+computacional.
+
+\subsection{Cómo se desarrolla cada réplica}
+
+Cada una de las 1\,000 jornadas simuladas sigue el mismo proceso:
 
 \begin{enumerate}[noitemsep]
-  \item Crear generador aleatorio con semilla \texttt{2026}.
-  \item Generar llegadas de grupos hasta $t = 240$ min.
-  \item Para cada grupo: asignar tamaño y tiempo de registro. Calcular fin
-    de registro con ventanilla FIFO.
-  \item Ordenar grupos por fin de registro.
-  \item Mantener lista con disponibilidad de cada embarcación.
-  \item Cuando una embarcación está disponible:
+  \item Se fija la semilla aleatoria \texttt{2026} para que los
+    resultados sean reproducibles.
+  \item Se generan los tiempos entre llegadas de grupos hasta completar
+    los 240 minutos de jornada.
+  \item A cada grupo se le asigna un tamaño y un tiempo de registro.
+    Con eso se calcula cuándo termina de registrarse, respetando la
+    cola FIFO de la ventanilla.
+  \item Los grupos ordenados por fin de registro pasan a la cola de
+    embarque.
+  \item Se mantiene el registro de disponibilidad de cada embarcación.
+  \item Cuando una embarcación queda libre, se evalúa la cola:
     \begin{enumerate}[noitemsep,label=\alph*.]
-      \item Revisar cola FIFO.
-      \item Cargar grupos sin dividirlos hasta capacidad máxima.
-      \item Partir al llegar a 24 turistas o al cumplirse 15 min de espera
-        del primer grupo.
-      \item Si la hora de salida supera $t = 240$ min, cerrar jornada;
-        grupos en cola = demanda no atendida.
-      \item Calcular ciclo: $T_{n1} + T_p + T_{n2} + T_{prep}$.
+      \item Se cargan grupos en orden FIFO sin dividirlos.
+      \item La embarcación parte al alcanzar 24 turistas o cuando el
+        primer grupo en cola lleva 15 minutos esperando.
+      \item Si la hora de salida supera los 240 minutos, la jornada
+        cierra y los grupos restantes quedan sin atender.
+      \item El ciclo completo de la embarcación se calcula como:
+        $T_{n1} + T_p + T_{n2} + T_{prep}$.
     \end{enumerate}
-  \item Calcular espera: $W_q = t_{salida} - t_{llegada}$.
-  \item Calcular métricas de la jornada.
-  \item Repetir 1\,000 veces y promediar.
+  \item Para cada grupo atendido se registra su tiempo de espera:
+    $W_q = t_{\text{salida}} - t_{\text{llegada}}$.
+  \item Al finalizar la jornada se calculan todas las métricas.
+  \item Se repite desde el paso 2 hasta completar las 1\,000 réplicas
+    y se promedian los resultados.
 \end{enumerate}
 
-\subsection{Fórmulas de métricas}
+\subsection{Métricas calculadas}
+
+Las métricas que se obtienen de cada réplica y se promedian al final son
+las siguientes:
 
 \begin{align}
-  W_q &= \frac{1}{n}\sum_{i=1}^{n}(t_{\text{salida},i} - t_{\text{llegada},i})
+  W_q &= \frac{1}{n}\sum_{i=1}^{n}(t_{\text{salida},i} -
+    t_{\text{llegada},i})
     \tag{Espera promedio} \\[6pt]
   W   &= W_q + E[T_{n1} + T_p + T_{n2}]
-    \tag{Tiempo en sistema} \\[6pt]
+    \tag{Tiempo total en sistema} \\[6pt]
   L_q &= \lambda \cdot W_q \quad (\text{Ley de Little})
     \tag{Longitud de cola} \\[6pt]
-  \rho &= \frac{\sum t_{\text{activo en jornada}}}{T_{\text{jornada}} \cdot c}
-    \tag{Utilización}
+  \rho &= \frac{\sum t_{\text{activo en jornada}}}{T_{\text{jornada}}
+    \cdot c}
+    \tag{Utilización de embarcaciones}
 \end{align}
 
-\noindent donde $\lambda = 8/60$ grupos/min, $T_{\text{jornada}} = 240$ min
-y $c$ es el número de embarcaciones.
+\noindent donde $\lambda = 8/60$ grupos por minuto,
+$T_{\text{jornada}} = 240$ minutos y $c$ es el número de embarcaciones
+del escenario evaluado.
 
 % -----------------------------------------------------------------------
 % 10. IMPLEMENTACIÓN EN PYTHON
@@ -684,19 +780,41 @@ abordar.
 % -----------------------------------------------------------------------
 \section{Comparación de escenarios}
 
+Para que la simulación tenga valor práctico, no basta con analizar un
+solo caso. Se diseñaron cuatro escenarios alternativos al base con el
+objetivo de responder una pregunta concreta: ¿qué cambio operativo
+mejora más el sistema con menor costo de implementación?
+
+Los cinco escenarios evaluados son:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{E0 — Base:} 3 embarcaciones, capacidad 30 turistas,
+    preparación 10 min, demanda de 8 grupos/hora.
+  \item \textbf{E1 — Más embarcaciones:} se agrega una cuarta
+    embarcación manteniendo todo lo demás igual.
+  \item \textbf{E2 — Menor preparación:} se reduce el tiempo de
+    alistamiento de 10 a 5 minutos entre viajes.
+  \item \textbf{E3 — Mayor capacidad:} las embarcaciones pasan de 30
+    a 40 turistas de capacidad, con umbral de salida en 32.
+  \item \textbf{E4 — Alta demanda:} la tasa de llegada sube a 10
+    grupos por hora, simulando un día de mayor afluencia.
+\end{itemize}
+
 \begin{table}[H]
   \centering
-  \caption{Comparación de escenarios -- promedio de 1\,000 réplicas Montecarlo}
+  \caption{Comparación de escenarios -- promedio de 1\,000 réplicas
+    Montecarlo}
   \small
   \begin{tabular}{@{}lrrrrrr@{}}
     \toprule
-    Escenario & Espera & $L_q$ & Util. & Percentil 95 & Atend. & No atend. \\
-              & (min)  & (gr.) & (\%)  & (min)        &        &            \\
+    Escenario & Espera & $L_q$ & Util. & Percentil 95 & Atend. &
+      No atend. \\
+              & (min)  & (gr.) & (\%)  & (min)        &        & \\
     \midrule
-    E0 Base             & 66,21 & 8,83 & 82,8 & 142,72 & 119,9 & 224,9 \\
-    E1 Más embarcaciones & 55,65 & 7,42 & 79,3 & 126,51 & 149,6 & 190,0 \\
-    E2 Menor preparación & 66,16 & 8,82 & 82,7 & 140,19 & 121,8 & 219,0 \\
-    E3 Mayor capacidad   & 61,77 & 8,24 & 80,8 & 129,25 & 148,0 & 192,5 \\
+    E0 Base              & 66,21 &  8,83 & 82,8 & 142,72 & 119,9 & 224,9 \\
+    E1 Más embarcaciones & 55,65 &  7,42 & 79,3 & 126,51 & 149,6 & 190,0 \\
+    E2 Menor preparación & 66,16 &  8,82 & 82,7 & 140,19 & 121,8 & 219,0 \\
+    E3 Mayor capacidad   & 61,77 &  8,24 & 80,8 & 129,25 & 148,0 & 192,5 \\
     E4 Alta demanda      & 71,85 & 11,98 & 84,5 & 154,79 & 125,7 & 304,4 \\
     \bottomrule
   \end{tabular}
@@ -728,74 +846,143 @@ abordar.
     \caption{Turistas no atendidos}
   \end{subfigure}
 
-  \caption{Comparación de escenarios E0--E4}
+  \caption{Comparación de métricas entre escenarios E0--E4}
 \end{figure}
+
+\subsection{Análisis de resultados por escenario}
+
+\paragraph{E0 — Base.}
+El sistema opera con una espera promedio de 66,21 minutos y una
+utilización del 82,8\%. El percentil 95 de espera llega a 142,72
+minutos, lo que significa que 1 de cada 20 grupos espera más de dos
+horas y media solo para embarcar. Eso evidencia un sistema con
+congestión real, no marginal.
+
+\paragraph{E1 — Más embarcaciones.}
+Agregar una cuarta embarcación reduce la espera promedio en 10,56
+minutos y el percentil 95 baja a 126,51 minutos. Los turistas
+atendidos suben de 119,9 a 149,6, un incremento del 24,7\%. Es la
+mejora más grande en términos absolutos, pero también la que mayor
+inversión requiere: una embarcación adicional implica compra,
+matrícula, tripulación y mantenimiento.
+
+\paragraph{E2 — Menor preparación.}
+Este es el resultado más revelador del análisis. Reducir el tiempo
+de preparación de 10 a 5 minutos, exactamente a la mitad, produce
+una mejora de apenas \textbf{0,05 minutos} en la espera promedio.
+Prácticamente nada. La razón es matemáticamente clara: la preparación
+representa solo el 5,6\% del ciclo total de 180 minutos. Ahorrar 5
+minutos por viaje, en 5,2 viajes promedio por jornada, da un ahorro
+total de 26 minutos distribuidos entre 3 embarcaciones, insuficiente
+para liberar capacidad real. Optimizar ese proceso no está justificado
+por los resultados.
+
+\paragraph{E3 — Mayor capacidad.}
+Aumentar la capacidad a 40 turistas por embarcación reduce la espera
+a 61,77 minutos y el percentil 95 a 129,25 minutos. Los turistas
+atendidos llegan a 148,0, casi igual que en E1 pero sin agregar
+ninguna embarcación nueva. Es un resultado relevante porque logra
+un impacto comparable a E1 a través de un cambio operativo diferente:
+embarcaciones más grandes en lugar de más embarcaciones.
+
+\paragraph{E4 — Alta demanda.}
+Con 10 grupos por hora el sistema se deteriora notablemente: 304,4
+turistas no atendidos por jornada, un 35\% más que en el escenario
+base. Este escenario no representa una mejora sino una prueba de
+estrés que confirma algo importante: el sistema ya opera cerca de su
+límite. Un incremento de demanda moderado lo desborda por completo.
 
 % -----------------------------------------------------------------------
 % 14. DISCUSIÓN
 % -----------------------------------------------------------------------
 \section{Discusión}
 
-\subsection{Por qué E2 no mejora significativamente}
+\subsection{Lo que E2 revela sobre el verdadero cuello de botella}
 
-El tiempo de preparación (10 min en E0, 5 min en E2) representa el 5,6\%
-del ciclo medio de 180 minutos. Reducirlo a la mitad ahorra solo 5 minutos
-por ciclo. Con 5,2 viajes promedio por jornada, el ahorro total es de
-$5 \times 5{,}2 \approx 26$ minutos distribuidos entre 3 embarcaciones.
-Este ahorro es insuficiente para permitir un tercer viaje de alguna
-embarcación, por lo que la capacidad efectiva cambia muy poco y la espera
-promedio baja menos de 0,1 minutos respecto al escenario base.
+Uno podría asumir que si se reduce el tiempo muerto entre viajes, el
+sistema debería mejorar. Los números dicen lo contrario. El tiempo de
+preparación de 10 minutos parece significativo cuando se observa un
+solo viaje, pero dentro del ciclo completo de 180 minutos representa
+apenas el 5,6\%. Reducirlo a 5 minutos ahorra 26 minutos totales
+distribuidos entre 3 embarcaciones en toda la jornada, un valor
+demasiado pequeño para generar un viaje adicional o reducir la cola
+de forma perceptible.
 
-\subsection{Por qué E1 es la mejora más efectiva}
+Esto confirma que el cuello de botella no está en la preparación sino
+en la relación entre la capacidad de la flota y el volumen de demanda.
+El sistema recibe alrededor de 345 turistas por jornada pero solo puede
+transportar entre 120 y 160. Esa brecha estructural no se cierra con
+ajustes menores.
 
-Agregar una cuarta embarcación aumenta la capacidad en un 33\%. En la
-práctica, la cuarta embarcación puede completar sus viajes en paralelo con
-las demás, permitiendo que más grupos sean atendidos antes del cierre de la
-jornada. El número de turistas atendidos aumenta de 119,9 a 149,6 (+24,7\%)
-y los turistas no atendidos caen de 224,9 a 190,0 (--15,5\%).
+\subsection{Por qué E1 funciona mejor que todos}
 
-\subsection{Por qué E3 es comparable a E1}
+Agregar una embarcación aumenta la capacidad del sistema en un 33\%.
+Más importante aún, la cuarta embarcación opera en paralelo con las
+otras tres, lo que significa que puede completar su ciclo mientras las
+demás aún están en viaje. Eso se traduce directamente en más grupos
+atendidos antes del cierre de la jornada: de 119,9 a 149,6 turistas
+promedio, con 35 turistas no atendidos menos por día. El percentil 95
+de espera cae 16 minutos. Es la intervención con mayor impacto
+numérico en todas las métricas.
 
-Aumentar la capacidad de 30 a 40 turistas por embarcación (con umbral de
-32) permite cargar más turistas por viaje. Con menos viajes necesarios
-(4,98 vs.\ 5,16 en E0), el sistema procesa más turistas por ciclo. El
-resultado es similar a E1: 148,0 turistas atendidos y 192,5 no atendidos.
-La diferencia es que E3 requiere embarcaciones de mayor porte, mientras
-que E1 requiere un bote adicional.
+\subsection{Por qué E3 es una alternativa real}
 
-\subsection{E4 como prueba de estrés}
+Lo interesante de E3 es que logra resultados muy cercanos a E1 sin
+ampliar la flota. Pasar de 30 a 40 turistas por embarcación permite
+que cada viaje sea más productivo: se transportan más personas por
+ciclo con el mismo número de botes. Los turistas atendidos llegan a
+148, casi idéntico a los 149,6 de E1. La diferencia práctica es que
+E3 requiere embarcaciones de mayor porte o capacidad ampliada, lo que
+puede ser más fácil de gestionar operativamente que adquirir una
+unidad completamente nueva.
 
-Con 10 grupos/hora (alta demanda) el sistema colapsa: 304,4 turistas no
-atendidos por jornada, un 35\% más que en E0. La espera promedio sube un
-8,5\%. Esto confirma que el sistema base ya opera cerca de su límite y que
-una demanda moderadamente superior lo desborda.
+\subsection{Lo que E4 anticipa}
+
+El escenario de alta demanda no es una mejora sino una advertencia.
+Si la demanda sube apenas un 25\% (de 8 a 10 grupos por hora), el
+sistema pasa de 224,9 turistas no atendidos a 304,4. Un incremento
+del 35\% en turistas no atendidos por un aumento del 25\% en demanda.
+Esa desproporción indica que el sistema no tiene margen de absorción.
+Ante cualquier evento que concentre más turistas en el muelle, como
+festividades o feriados, el sistema colapsará sin una intervención
+estructural previa.
 
 % -----------------------------------------------------------------------
 % 15. CONCLUSIONES
 % -----------------------------------------------------------------------
 \section{Conclusiones}
 
+A partir de los resultados obtenidos en las 1\,000 réplicas Montecarlo
+por escenario, se pueden establecer las siguientes conclusiones:
+
 \begin{enumerate}[noitemsep]
-  \item Se identificaron cinco variables aleatorias con alta variabilidad:
-    tiempo entre llegadas, tamaño de grupo, registro, navegación y
-    permanencia.
+  \item Se identificaron cinco variables aleatorias con variabilidad
+    relevante para el sistema: tiempo entre llegadas, tamaño de grupo,
+    tiempo de registro, tiempo de navegación y tiempo de permanencia
+    en isla.
   \item Las distribuciones Exponencial, Triangular y Uniforme modelan
-    adecuadamente el comportamiento de cada variable; la validación con
-    10\,000 muestras confirma desviaciones inferiores al 1\% respecto a
-    las medias teóricas.
-  \item La ficha de observación sintética construida con base en fuentes
-    públicas y el PDF base justifica los parámetros del modelo sin recurrir
-    a datos no disponibles.
-  \item El escenario base muestra que el sistema es estructuralmente
+    adecuadamente cada variable. La validación con 10\,000 muestras
+    mostró desviaciones inferiores al 1\% respecto a las medias
+    teóricas en todos los casos.
+  \item La ficha de observación sintética, construida con base en
+    fuentes públicas y el PDF del trabajo, permite justificar los
+    parámetros del modelo de forma académicamente coherente sin
+    necesidad de datos de campo propios.
+  \item El escenario base evidencia que el sistema está estructuralmente
     congestionado: la demanda promedio supera la capacidad efectiva en
     aproximadamente el 65\% de los turistas por jornada.
-  \item La simulación Montecarlo con 1\,000 réplicas produce estimaciones
-    estables y reproducibles de todas las métricas.
-  \item E1 (cuarta embarcación) y E3 (mayor capacidad) reducen
-    significativamente la demanda no atendida; E2 (menor preparación)
-    ofrece impacto marginal.
-  \item E4 confirma que ante demanda alta el sistema requiere mejoras
-    estructurales, no solo ajustes operativos.
+  \item La simulación Montecarlo con 1\,000 réplicas produce resultados
+    estables y reproducibles. Los promedios no cambian de forma
+    significativa al aumentar el número de réplicas, lo que confirma
+    la convergencia del método.
+  \item Reducir el tiempo de preparación (E2) no mejora el sistema de
+    manera perceptible porque ese tiempo no es el cuello de botella.
+  \item Aumentar la capacidad por embarcación (E3) y agregar una
+    embarcación (E1) son las únicas intervenciones que producen mejoras
+    reales y medibles en todas las métricas.
+  \item El escenario de alta demanda (E4) confirma que el sistema no
+    tiene capacidad de absorción ante incrementos de afluencia. Se
+    requieren mejoras estructurales antes de que eso ocurra.
 \end{enumerate}
 
 % -----------------------------------------------------------------------
